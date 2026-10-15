@@ -1,4 +1,8 @@
+<!doctype html>
+<html lang="ko">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Glass Wedding Invitation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -822,10 +826,14 @@ void main(){
 
   if (!ok) return;
   /* loop */
-  let dpr = 1;
+  let dpr = 1, cr = canvas.getBoundingClientRect();
+  // size the drawing buffer from the canvas's real on-screen box (not innerWidth/innerHeight, which
+  // include the desktop scrollbar and ignore mobile toolbar changes) and re-check it every frame
   function resize() {
+    cr = canvas.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr);
+    const w = Math.max(1, Math.round(cr.width * dpr)), h = Math.max(1, Math.round(cr.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     gl.viewport(0, 0, canvas.width, canvas.height);
   }
   addEventListener('resize', resize); resize();
@@ -846,7 +854,8 @@ void main(){
     if (!reduce && now - lastInput > 2500) { target.x = Math.sin(t * .45) * .6; target.y = Math.cos(t * .33) * .22; }
     const k = reduce ? .04 : .07;
     cur.x += (target.x - cur.x) * k; cur.y += (target.y - cur.y) * k;
-    const vw = canvas.width / dpr, vh = canvas.height / dpr;
+    resize();
+    const vw = cr.width, vh = cr.height, ox0 = cr.left, oy0 = cr.top;
     // scroll prediction: the page has moved on by the time this frame is shown, so draw pieces one frame ahead
     const sNow = scrollY, dS = sNow - lastS; lastS = sNow;
     vel = Math.abs(dS) > 300 ? 0 : vel * .5 + dS * .5;
@@ -865,7 +874,8 @@ void main(){
     const vis = [];
     for (const el of els) {
       const s = P[el.dataset.s]; if (!atlasReady[s[4]]) continue;
-      const r = el.getBoundingClientRect();
+      const r0 = el.getBoundingClientRect();
+      const r = { left: r0.left - ox0, top: r0.top - oy0, width: r0.width, height: r0.height, bottom: r0.bottom - oy0 };
       if (r.bottom < -40 || r.top > vh + 40 || r.width < 1) continue;
       if (el.checkVisibility ? !el.checkVisibility() : el.offsetParent === null) continue;
       vis.push([el, r, s]);
@@ -878,7 +888,8 @@ void main(){
     // pass 0: flat veils and gold frame lines, beneath every glass piece
     gl.uniform1f(SP.u.uMode, 2); gl.uniform1f(SP.u.uHasMask, 0);
     for (const el of flats) {
-      const r = el.getBoundingClientRect();
+      const r0 = el.getBoundingClientRect();
+      const r = { left: r0.left - ox0, top: r0.top - oy0, width: r0.width, height: r0.height, bottom: r0.bottom - oy0 };
       if (r.bottom < -10 || r.top > vh + 10) continue;
       const c = el.dataset.c === 'gold' ? [.78, .62, .35, .9] : [1, .988, .965, .62];
       gl.uniform4f(SP.u.uColor, c[0], c[1], c[2], c[3]);
