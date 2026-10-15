@@ -59,6 +59,8 @@ p { margin: 0; }
 .sr-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .hint { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 30px; }
 .hint p { font-size: 13px; color: var(--ink-soft); text-align: center; }
+a.btn { text-decoration: none; }
+#openExt[hidden] { display: none; }
 
 .btn {
   font-family: var(--font-body); font-size: 13px; color: var(--ink);
@@ -331,6 +333,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
   </div>
   <div class="hint">
     <p id="hintText">액자를 좌우로 쓸면 빛이 움직여요</p>
+    <a class="btn" id="openExt" href="#" hidden>기울기 효과는 브라우저에서 보기</a>
   </div>
 
   <!-- names & date -->
@@ -822,6 +825,14 @@ void main(){
       };
       addEventListener('touchend', ask, true); addEventListener('click', ask, true);
     }
+  }
+  // KakaoTalk's in-app browser usually blocks the motion sensor (always on iPhone, on some Android phones).
+  // If no tilt reading arrives there, offer to reopen the page in the phone's own browser, where tilt works.
+  if (/KAKAOTALK/i.test(navigator.userAgent)) {
+    const ext = document.getElementById('openExt');
+    ext.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+    setTimeout(() => { if (!usingSensor) ext.hidden = false; }, 1500);
+    addEventListener('deviceorientation', () => { if (usingSensor) ext.hidden = true; });
   }
 
   if (!ok) return;
