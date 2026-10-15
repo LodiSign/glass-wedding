@@ -31,6 +31,10 @@ p { margin: 0; }
 :is(.no-gl, .dom) .inv-card { background: linear-gradient(rgba(255,252,246,.62), rgba(255,252,246,.62)) 7px 7px / calc(100% - 14px) calc(100% - 14px) no-repeat; }
 :is(.no-gl, .dom) .acct-card { background: linear-gradient(rgba(255,252,246,.62), rgba(255,252,246,.62)) 8px 8px / calc(100% - 16px) calc(100% - 16px) no-repeat; }
 :is(.no-gl, .dom) .spr::after { content: ""; position: absolute; inset: 0; background: var(--sb) no-repeat; background-size: var(--bs); background-position: var(--bp); pointer-events: none; }
+/* the coloured light each piece throws on the page, so it stays while scrolling (same offset, size and tint as the glass layer's) */
+.dom .spr:not(.flat):not(.hang)::before { content: ""; position: absolute; inset: 0; background: var(--sb) no-repeat; background-size: var(--bs); background-position: var(--bp); pointer-events: none;
+  transform: translate(var(--lx, 5px), var(--ly, 11px)) scale(1.06); filter: saturate(2.2) brightness(.9) blur(1.5px); opacity: .13; }
+.dom .spr.hang::after { filter: drop-shadow(var(--lx, 5px) var(--ly, 11px) 2px rgba(150,130,175,.14)); }
 .spr > img.fb { display: none; }
 :is(.no-gl, .dom) .spr > img.fb { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; -webkit-mask: var(--mb) no-repeat; -webkit-mask-size: var(--ms); -webkit-mask-position: var(--mp); mask: var(--mb) no-repeat; mask-size: var(--ms); mask-position: var(--mp); }
 
@@ -855,7 +859,11 @@ void main(){
   const root = document.documentElement;
   let scrolling = false, stopT = 0, glBack = false;
   addEventListener('scroll', () => {
-    if (!scrolling) { scrolling = true; root.classList.add('dom'); }
+    if (!scrolling) {
+      scrolling = true;
+      root.style.setProperty('--lx', (5 + cur.x * 16).toFixed(1) + 'px'); root.style.setProperty('--ly', (11 + cur.y * 6).toFixed(1) + 'px');
+      root.classList.add('dom');
+    }
     clearTimeout(stopT);
     stopT = setTimeout(() => { scrolling = false; glBack = true; }, 160);
   }, { passive: true });
