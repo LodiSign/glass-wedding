@@ -23,6 +23,12 @@
 *, *::before, *::after { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--font-body); padding-inline: 16px; padding-block: 18px 40px; overflow-x: hidden; word-break: keep-all; }
 #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; pointer-events: none; }
+/* the glass pieces are drawn on a canvas that sits in the page itself, so if the page moves before the next
+   frame is drawn, the pieces move with it instead of staying stuck on the screen */
+html { position: relative; }
+#glsWrap { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+#gls { position: absolute; left: 0; top: 0; display: block; will-change: transform; }
+:is(.dom, .no-gl) #glsWrap { visibility: hidden; }
 main { position: relative; z-index: 1; max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 26px; }
 p { margin: 0; }
 
@@ -325,6 +331,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
 </style>
 
 <canvas id="gl" aria-hidden="true"></canvas>
+<div id="glsWrap" aria-hidden="true"><canvas id="gls"></canvas></div>
 
 <main>
   <div class="spr orn" data-s="quatre" aria-hidden="true"></div>
@@ -535,7 +542,9 @@ const SPRITES = {"t":[[1700,1768],[2048,1870],[1400,945]],"p":{"arch":[0,0,542,8
   const hint = document.getElementById('hintText');
   const input = document.getElementById('photoInput');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false });
+  const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false });   // background
+  const scv = document.getElementById('gls');
+  const gs = gl ? scv.getContext('webgl', { antialias: false, premultipliedAlpha: true }) : null;   // glass pieces
 
   const COMMON = `
 precision highp float;
@@ -597,8 +606,8 @@ void main(){
 
   /* one glass piece: drawn as a quad over its placeholder */
   const SP_VS = `
-attribute vec2 q; uniform vec4 uRect; uniform vec2 uView; varying vec2 vL;
-void main(){ vL = q; vec2 p = (uRect.xy + q*uRect.zw) / uView; gl_Position = vec4(p.x*2.-1., 1.-p.y*2., 0., 1.); }`;
+attribute vec2 q; uniform vec4 uRect; uniform vec2 uView; uniform vec2 uCv; uniform float uOff; varying vec2 vL;
+void main(){ vL = q; vec2 p = (uRect.xy + q*uRect.zw + vec2(0., uOff)) / uCv; gl_Position = vec4(p.x*2.-1., 1.-p.y*2., 0., 1.); }`;
   const SP_FS = COMMON + `
 uniform sampler2D uTex; uniform vec4 uA; uniform vec4 uRect; uniform float uMode; uniform float uSeed;
 uniform vec4 uM; uniform float uHasMask; uniform sampler2D uPh; uniform vec4 uColor;
@@ -684,19 +693,19 @@ void main(){
   let photoTex = [], atlasReady = [false, false, false], bgReady = false;
   const AU = [0, 1, 5];
   function pushPhoto(i) {
-    if (gl && photoTex[i]) {
-      gl.activeTexture(gl.TEXTURE3 + i); gl.bindTexture(gl.TEXTURE_2D, photoTex[i]);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, photoCanvases[i]);
+    if (gs && photoTex[i]) {
+      gs.activeTexture(gs.TEXTURE3 + i); gs.bindTexture(gs.TEXTURE_2D, photoTex[i]);
+      gs.pixelStorei(gs.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gs.texImage2D(gs.TEXTURE_2D, 0, gs.RGBA, gs.RGBA, gs.UNSIGNED_BYTE, photoCanvases[i]);
     }
     const fb = slots[i].querySelector('img.fb');
     if (fb) fb.src = photoCanvases[i].toDataURL('image/jpeg', .9);
   }
   function loadImage(src, ok, fail) { const im = new Image(); im.onload = () => ok(im); if (fail) im.onerror = fail; im.src = src; }
 
-  let ok = !!gl, BG = null, SP = null;
-  if (gl) {
-    const build = (vs, fs, names) => {
+  let ok = !!gl && !!gs, BG = null, SP = null;
+  if (ok) {
+    const build = (gl, vs, fs, names) => {
       const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
         if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); ok = false; } return s; };
       const pr = gl.createProgram();
@@ -706,26 +715,28 @@ void main(){
       const u = {}; names.forEach(n => u[n] = gl.getUniformLocation(pr, n));
       return { pr, u };
     };
-    BG = build(BG_VS, BG_FS, ['uView','uTilt','uScroll','uDpr','uBg','uBgSize','uBgReady']);
-    SP = build(SP_VS, SP_FS, ['uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
+    BG = build(gl, BG_VS, BG_FS, ['uView','uTilt','uScroll','uDpr','uBg','uBgSize','uBgReady']);
+    SP = build(gs, SP_VS, SP_FS, ['uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
   }
   if (ok) {
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 0,1, 1,1]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    const mk = unit => {
+    [gl, gs].forEach(gl => {
+      const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 0,1, 1,1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    });
+    gs.enable(gs.BLEND); gs.blendFunc(gs.ONE, gs.ONE_MINUS_SRC_ALPHA);
+    const mk = (gl, unit) => {
       const tx = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tx);
       [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]
         .forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v));
       return tx;
     };
-    const atl = [mk(0), mk(1), mk(5)], bgTex = mk(2); photoTex = [mk(3), mk(4)];
+    const atl = [mk(gs, 0), mk(gs, 1), mk(gs, 5)], bgTex = mk(gl, 2); photoTex = [mk(gs, 3), mk(gs, 4)];
     ATLAS_URLS.forEach((u, i) => loadImage(u, img => {
-      gl.activeTexture(gl.TEXTURE0 + AU[i]); gl.bindTexture(gl.TEXTURE_2D, atl[i]);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gs.activeTexture(gs.TEXTURE0 + AU[i]); gs.bindTexture(gs.TEXTURE_2D, atl[i]);
+      gs.pixelStorei(gs.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      gs.texImage2D(gs.TEXTURE_2D, 0, gs.RGBA, gs.RGBA, gs.UNSIGNED_BYTE, img);
+      gs.pixelStorei(gs.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
       atlasReady[i] = true;
     }));
     loadImage(BG_URL, img => {
@@ -841,7 +852,8 @@ void main(){
 
   if (!ok) return;
   /* loop */
-  let dpr = 1, cr = canvas.getBoundingClientRect();
+  let dpr = 1, M = 0, cr = canvas.getBoundingClientRect();
+  const wrap = document.getElementById('glsWrap');
   // size the drawing buffer from the canvas's real on-screen box (not innerWidth/innerHeight, which
   // include the desktop scrollbar and ignore mobile toolbar changes) and re-check it every frame
   function resize() {
@@ -850,6 +862,13 @@ void main(){
     const w = Math.max(1, Math.round(cr.width * dpr)), h = Math.max(1, Math.round(cr.height * dpr));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     gl.viewport(0, 0, canvas.width, canvas.height);
+    // the glass canvas reaches MARGIN beyond the screen above and below
+    M = Math.round(cr.height * .35);
+    const sw = Math.max(1, Math.round(cr.width * dpr)), sh = Math.max(1, Math.round((cr.height + 2 * M) * dpr));
+    if (scv.width !== sw || scv.height !== sh) {
+      scv.width = sw; scv.height = sh; scv.style.width = cr.width + 'px'; scv.style.height = (cr.height + 2 * M) + 'px';
+    }
+    gs.viewport(0, 0, scv.width, scv.height);
   }
   addEventListener('resize', resize); resize();
   const seeds = new Map(); els.forEach((el, i) => seeds.set(el, (i * 7.31) % 13));
@@ -868,6 +887,7 @@ void main(){
     stopT = setTimeout(() => { scrolling = false; glBack = true; }, 160);
   }, { passive: true });
   let lastS = scrollY, vel = 0;
+  const gB = gl;
   function frame(now) {
     const t = (now - t0) / 1000;
     if (!reduce && now - lastInput > 2500) { target.x = Math.sin(t * .45) * .6; target.y = Math.cos(t * .33) * .22; }
@@ -880,22 +900,26 @@ void main(){
     vel = Math.abs(dS) > 300 ? 0 : vel * .5 + dS * .5;
     const lead = 0;
 
-    gl.disable(gl.BLEND);
-    gl.useProgram(BG.pr);
-    gl.uniform2f(BG.u.uView, vw, vh); gl.uniform2f(BG.u.uTilt, cur.x, cur.y); gl.uniform1f(BG.u.uScroll, scrollY);
-    gl.uniform1f(BG.u.uDpr, dpr); gl.uniform1i(BG.u.uBg, 2); gl.uniform1f(BG.u.uBgReady, bgReady ? 1 : 0);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gB.useProgram(BG.pr);
+    gB.uniform2f(BG.u.uView, vw, vh); gB.uniform2f(BG.u.uTilt, cur.x, cur.y); gB.uniform1f(BG.u.uScroll, scrollY);
+    gB.uniform1f(BG.u.uDpr, dpr); gB.uniform1i(BG.u.uBg, 2); gB.uniform1f(BG.u.uBgReady, bgReady ? 1 : 0);
+    gB.drawArrays(gB.TRIANGLE_STRIP, 0, 4);
 
     if (scrolling) { requestAnimationFrame(frame); return; }
-    gl.enable(gl.BLEND);
+    // place the glass canvas over the screen (plus margin) in page coordinates, then draw
+    const wr = wrap.getBoundingClientRect();
+    scv.style.transform = `translate(${ox0 - wr.left}px, ${oy0 - M - wr.top}px)`;
+    const gl = gs;
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(SP.pr);
+    gl.uniform2f(SP.u.uCv, vw, vh + 2 * M); gl.uniform1f(SP.u.uOff, M);
     gl.uniform2f(SP.u.uView, vw, vh); gl.uniform2f(SP.u.uTilt, cur.x, cur.y); gl.uniform1f(SP.u.uScroll, scrollY);
     const vis = [];
     for (const el of els) {
       const s = P[el.dataset.s]; if (!atlasReady[s[4]]) continue;
       const r0 = el.getBoundingClientRect();
       const r = { left: r0.left - ox0, top: r0.top - oy0, width: r0.width, height: r0.height, bottom: r0.bottom - oy0 };
-      if (r.bottom < -40 || r.top > vh + 40 || r.width < 1) continue;
+      if (r.bottom < -M || r.top > vh + M || r.width < 1) continue;
       if (el.checkVisibility ? !el.checkVisibility() : el.offsetParent === null) continue;
       vis.push([el, r, s]);
     }
@@ -909,7 +933,7 @@ void main(){
     for (const el of flats) {
       const r0 = el.getBoundingClientRect();
       const r = { left: r0.left - ox0, top: r0.top - oy0, width: r0.width, height: r0.height, bottom: r0.bottom - oy0 };
-      if (r.bottom < -10 || r.top > vh + 10) continue;
+      if (r.bottom < -M || r.top > vh + M) continue;
       const c = el.dataset.c === 'gold' ? [.78, .62, .35, .9] : [1, .988, .965, .62];
       gl.uniform4f(SP.u.uColor, c[0], c[1], c[2], c[3]);
       gl.uniform4f(SP.u.uRect, r.left, r.top - lead, r.width, r.height);
