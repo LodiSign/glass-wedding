@@ -128,9 +128,9 @@ h2 { font-family: var(--font-body); font-weight: 700; font-size: 18px; margin: 0
 .venue-line { margin-top: -10px; font-size: 14px; color: var(--ink-soft); text-align: center; }
 /* hero names: arched white panel behind the names, bud sprigs either side, date without a frame */
 .hero-names { position: relative; gap: 0; }
-.hero-names .arch-veil { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); width: min(70%, 290px); height: 268px; }
+.hero-names .arch-veil { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); width: min(70%, 290px); aspect-ratio: 290 / 262; }
 .hero-names > .crown { position: relative; z-index: 1; width: 196px; }
-:is(.no-gl, .dom) .hero-names .arch-veil { border-radius: 999px 999px 0 0; -webkit-mask: linear-gradient(#000 50%, transparent); mask: linear-gradient(#000 50%, transparent); }
+:is(.no-gl, .dom) .hero-names .arch-veil { border-radius: 50% 50% 0 0 / 44% 44% 0 0; -webkit-mask: linear-gradient(#000 50%, transparent); mask: linear-gradient(#000 50%, transparent); }
 .hero-names .names-row { margin-top: 24px; grid-template-columns: 96px 1fr 96px; align-items: end; }
 .hero-names .names-row .spr { width: 76px; margin-bottom: -36px; justify-self: center; }
 .hero-names .names-box { gap: 6px; padding-bottom: 0; }
@@ -659,13 +659,13 @@ void main(){
     float d = length(max(q2, 0.)) + min(max(q2.x, q2.y), 0.) - uRad;
     float a = cc.a * clamp(.5 - d, 0., 1.);
     if (uArch > .5) {
-      // arched panel: round top (radius = half the width), straight sides, fading out towards the bottom,
-      // with two thin gold arcs running down its upper sides
-      vec2 lp = l * uRect.zw; float r = uRect.z * .24;
-      vec2 q3 = vec2(max(max(r - lp.x, lp.x - (uRect.z - r)), 0.), max(r - lp.y, 0.));
-      float da = (lp.y < r && (lp.x < r || lp.x > uRect.z - r)) ? length(q3) - r : max(max(-lp.x, lp.x - uRect.z), -lp.y);
-      a = cc.a * clamp(.5 - da, 0., 1.) * (1. - smoothstep(.6, 1., l.y));
-      float g = clamp(1. - abs(da + 3.) / .75, 0., 1.) * smoothstep(.35 * r, .8 * r, lp.y) * (1. - smoothstep(1.5 * r, 2.3 * r, lp.y)) * .9;
+      // round panel: an oval dome (half-width wide, ry tall) on straight sides, fading out towards the bottom,
+      // with two thin gold arcs following the dome down its left and right
+      vec2 lp = l * uRect.zw; float R = uRect.z * .5, ry = uRect.z * .4;
+      float da = lp.y < ry ? (length(vec2(lp.x - R, (lp.y - ry) * R / ry)) - R) * mix(ry / R, 1., smoothstep(0., ry, lp.y))
+                           : max(-lp.x, lp.x - uRect.z);
+      a = cc.a * clamp(.5 - da, 0., 1.) * (1. - smoothstep(.62, 1., l.y));
+      float g = clamp(1. - abs(da + 3.) / .8, 0., 1.) * smoothstep(.18 * ry, .42 * ry, lp.y) * (1. - smoothstep(.9 * ry, 1.25 * ry, lp.y)) * .9;
       vec3 col = mix(cc.rgb, vec3(.78, .62, .35), g);
       float al = max(a, g);
       gl_FragColor = vec4(col * al, al);
