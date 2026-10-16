@@ -128,17 +128,19 @@ h2 { font-family: var(--font-body); font-weight: 700; font-size: 18px; margin: 0
 .venue-line { margin-top: -10px; font-size: 14px; color: var(--ink-soft); text-align: center; }
 /* hero names: arched white panel behind the names, bud sprigs either side, date without a frame */
 .hero-names { position: relative; gap: 0; }
-.hero-names .names-box { position: relative; }
-.hero-names .arch-veil { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%); width: min(62vw, 256px); aspect-ratio: 1; z-index: -1; }
-.hero-names > .crown { position: relative; z-index: 1; width: 196px; }
-:is(.no-gl, .dom) .hero-names .arch-veil { border-radius: 50%; }
-.hero-names .names-row { margin-top: 24px; grid-template-columns: 96px 1fr 96px; align-items: end; }
-.hero-names .names-row .spr { width: 76px; margin-bottom: -36px; justify-self: center; }
-.hero-names .names-box { gap: 6px; padding-bottom: 0; }
-.hero-names .names { line-height: 1.08; font-size: clamp(34px, 10vw, 42px); white-space: nowrap; }
-.hero-names .names .amp { padding-block: 4px 3px; }
+.hero-names > .crown { position: relative; z-index: 1; width: 196px; margin-bottom: -40px; }
+/* wreath: a slightly tall oval around the names, flowers set on it, a thin gold line in the gaps between them */
+.wreath { position: relative; width: min(68vw, 262px); aspect-ratio: 1 / 1.06; display: grid; place-items: center; }
+.wreath .arch-veil { position: absolute; inset: 0; }
+.wreath .spr { position: absolute; }
+.wreath .wr-l { width: 29%; left: -14%; top: 46%; }
+.wreath .wr-r { width: 29%; right: -14%; top: 46%; }
+.wreath .names-box { position: relative; gap: 4px; padding: 6px 0 0; }
+.hero-names .names { line-height: .96; font-size: clamp(34px, 10vw, 42px); white-space: nowrap; }
+.hero-names .names .amp { font-size: .5em; padding-block: 1px 2px; }
+:is(.no-gl, .dom) .wreath .arch-veil { border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(196,155,88,.6); background: none; }
 .hero-names .kr { font-size: 14px; letter-spacing: .14em; }
-.date-plain { display: grid; justify-items: center; margin-top: 78px; }
+.date-plain { display: grid; justify-items: center; margin-top: 46px; }
 .date-plain .d1 { font-family: "Cinzel", Georgia, serif; font-weight: 600; font-size: clamp(30px, 9.4vw, 39px); letter-spacing: .04em; line-height: 1.1; font-variant-numeric: lining-nums; }
 .date-plain .d2 { font-family: "Cinzel", Georgia, serif; font-weight: 500; font-size: 13.5px; letter-spacing: .22em; color: #5a4c3e; margin-top: 2px; }
 .date-plain .dline { width: min(232px, 62vw); height: 1.5px; margin-top: 12px; background: linear-gradient(90deg, rgba(190,150,80,.35), #c49b58 18%, #c49b58 82%, rgba(190,150,80,.35)); }
@@ -386,14 +388,14 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
   <!-- names & date -->
   <div class="block hero-names">
     <div class="spr crown" data-s="crownC" aria-hidden="true"></div>
-    <div class="names-row">
-      <div class="spr" data-s="sprigB" aria-hidden="true"></div>
+    <div class="wreath">
+      <span class="flat arch-veil" data-c="veil" data-arch="1" aria-hidden="true"></span>
+      <div class="spr wr-l" data-s="sprigB" aria-hidden="true"></div>
+      <div class="spr wr-r" data-s="sprigBm" aria-hidden="true"></div>
       <div class="names-box">
-        <span class="flat arch-veil" data-c="veil" data-arch="1" aria-hidden="true"></span>
         <h1 class="names">Doyun<span class="amp">&amp;</span>Seoyeon</h1>
         <p class="kr">이도윤 · 김서연</p>
       </div>
-      <div class="spr" data-s="sprigBm" aria-hidden="true"></div>
     </div>
     <div class="date-plain">
       <p class="d1 engr">2027. 05. 22</p>
@@ -645,7 +647,7 @@ attribute vec2 q; uniform vec4 uRect; uniform vec2 uView; uniform vec2 uCv; unif
 void main(){ vL = q; vec2 p = (uRect.xy + q*uRect.zw + vec2(0., uOff)) / uCv; gl_Position = vec4(p.x*2.-1., 1.-p.y*2., 0., 1.); }`;
   const SP_FS = COMMON + `
 uniform sampler2D uTex; uniform vec4 uA; uniform vec4 uRect; uniform float uMode; uniform float uSeed;
-uniform vec4 uM; uniform float uHasMask; uniform sampler2D uPh; uniform vec4 uColor; uniform vec4 uColor2; uniform float uRad; uniform float uArch;
+uniform vec4 uM; uniform float uHasMask; uniform sampler2D uPh; uniform vec4 uColor; uniform vec4 uColor2; uniform float uRad; uniform float uArch; uniform float uVis[72];
 varying vec2 vL;
 vec4 at(vec2 l){ if (l.x < 0. || l.y < 0. || l.x > 1. || l.y > 1.) return vec4(0.); return texture2D(uTex, uA.xy + l*uA.zw); }
 void main(){
@@ -660,19 +662,19 @@ void main(){
     float d = length(max(q2, 0.)) + min(max(q2.x, q2.y), 0.) - uRad;
     float a = cc.a * clamp(.5 - d, 0., 1.);
     if (uArch > .5) {
-      // round panel: a full white circle behind the names, with a thin gold line running along its upper half
-      vec2 lp = l * uRect.zw; float R = uRect.z * .5;
-      float da = length(lp - vec2(R)) - R;
-      float yy = (lp.y - R) / R;
-      a = .93 * clamp(.5 - da, 0., 1.);
-      // soft shadow hugging the lower edge, so the circle lifts off the page
-      float sh = (1. - clamp(.5 - da, 0., 1.)) * exp(-max(da, 0.) / 7.) * smoothstep(.05, .75, yy) * .16;
-      float g = clamp(1. - abs(da + 3.) / .8, 0., 1.) * (1. - smoothstep(-.35, -.05, yy)) * .9;
-      vec3 col = mix(vec3(1., .998, .993), vec3(.78, .62, .35), g);
-      float al = max(a, g);
-      vec4 o = vec4(col * al, al);
-      o += vec4(vec3(.55, .5, .47) * sh, sh) * (1. - o.a);
-      gl_FragColor = o;
+      // wreath line: a thin gold oval (no fill). uVis holds, every 5 degrees round the oval, whether that
+      // point is clear of the flowers (measured on the page), so the line stops short of each piece
+      vec2 lp = l * uRect.zw, rr = uRect.zw * .5;
+      vec2 qe = (lp - rr) / rr;
+      float da = (length(qe) - 1.) * min(rr.x, rr.y);
+      float t = (degrees(atan(qe.y, qe.x)) + 180.) / 5.;   // 0..72
+      float vis = 0.;
+      for (int i = 0; i < 72; i++) {
+        float w = 1. - smoothstep(0., 1., abs(t - (float(i) + .5)));
+        vis += uVis[i] * w;
+      }
+      float g = clamp(1. - abs(da + 1.5) / .75, 0., 1.) * clamp(vis, 0., 1.) * .9;
+      gl_FragColor = vec4(vec3(.78, .62, .35) * g, g);
       return;
     }
     gl_FragColor = vec4(c * a, a);
@@ -772,7 +774,7 @@ void main(){
       return { pr, u };
     };
     BG = build(gl, BG_VS, BG_FS, ['uView','uTilt','uScroll','uDpr','uBg','uBgSize','uBgReady']);
-    SP = build(gs, SP_VS, SP_FS, ['uArch','uColor2','uRad','uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
+    SP = build(gs, SP_VS, SP_FS, ['uVis[0]','uArch','uColor2','uRad','uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
   }
   if (ok) {
     [gl, gs].forEach(gl => {
@@ -937,6 +939,18 @@ void main(){
   // drawn while scrolling — no swapping to plain copies (which showed up late and made pieces blink)
   let lastS = scrollY, vel = 0;
   const gB = gl;
+  // which 5-degree steps of the wreath oval are clear of the crown, the sprigs and the blossom (with a margin)
+  const visBuf = new Float32Array(72);
+  function wreathGaps(el, R) {
+    const cx = R.left + R.width / 2, cy = R.top + R.height / 2, rx = R.width / 2, ry = R.height / 2, m = 7;
+    const blocks = [...el.parentNode.querySelectorAll('.spr'), el.closest('.hero-names').querySelector(':scope > .crown')]
+      .filter(Boolean).map(e => e.getBoundingClientRect());
+    for (let i = 0; i < 72; i++) {
+      const a = (i * 5 + 2.5 - 180) * Math.PI / 180, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
+      visBuf[i] = blocks.some(b => x > b.left - m && x < b.right + m && y > b.top - m && y < b.bottom + m) ? 0 : 1;
+    }
+    return visBuf;
+  }
   function frame(now) {
     const t = (now - t0) / 1000;
     if (!reduce && now - lastInput > 2500) { target.x = Math.sin(t * .45) * .6; target.y = Math.cos(t * .33) * .22; }
@@ -990,6 +1004,7 @@ void main(){
       gl.uniform4f(SP.u.uColor2, c2[0], c2[1], c2[2], c2[3]);
       gl.uniform1f(SP.u.uRad, el.dataset.c === 'veil' ? 18 : 0);
       gl.uniform1f(SP.u.uArch, el.dataset.arch ? 1 : 0);
+      if (el.dataset.arch) gl.uniform1fv(SP.u['uVis[0]'], wreathGaps(el, r0));
       gl.uniform4f(SP.u.uRect, r.left, r.top - lead, r.width, r.height);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
