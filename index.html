@@ -290,24 +290,12 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
 .gslide .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gslide .bd { position: absolute; inset: 0; border-radius: 14px; box-shadow: inset 0 0 0 2px #c9a35f, inset 0 0 0 4px rgba(255,250,240,.6), 0 6px 18px rgba(140,110,60,.18); pointer-events: none; }
 .gslide .gc { position: absolute; pointer-events: none; background: var(--gi) var(--gp) / var(--gs) no-repeat; }
-/* stained-glass sheen on the gallery corner glass, like the other glass pieces: a warm white light band
-   that slides with the phone's tilt (--hx / --hy, set each frame) plus a few twinkling glints, clipped to the piece */
-.gslide .gc::after, .gslide .gc::before { content: ""; position: absolute; inset: 0; pointer-events: none;
-  -webkit-mask: var(--gi) var(--gp) / var(--gs) no-repeat; mask: var(--gi) var(--gp) / var(--gs) no-repeat; mix-blend-mode: screen; }
-.gslide .gc::after {
-  background: linear-gradient(calc(122deg + var(--hx, 0) * 24deg),
-    transparent calc(18% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
-    rgba(255,238,200,.55) calc(36% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
-    rgba(255,252,240,.95) calc(46% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
-    rgba(255,238,200,.55) calc(56% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
-    transparent calc(74% + var(--hx, 0) * 42% - var(--hy, 0) * 12%)); }
-.gslide .gc::before {
-  background: radial-gradient(circle at calc(30% + var(--hx, 0) * 25%) calc(38% - var(--hy, 0) * 20%), #fff 0 1.2px, transparent 2.4px),
-              radial-gradient(circle at calc(62% - var(--hx, 0) * 20%) calc(64% + var(--hy, 0) * 15%), #fff 0 1px, transparent 2px),
-              radial-gradient(circle at calc(48% + var(--hx, 0) * 30%) calc(22% + var(--hy, 0) * 10%), rgba(255,250,235,.9) 0 .9px, transparent 1.8px);
-  opacity: calc(.35 + var(--hx, 0) * var(--hx, 0) * .65); }
+/* while a photo is at rest its corner glass is drawn by the glass layer (same effect as every other piece);
+   during a swipe the plain copies show, so the corners never lag behind the photo */
+.gtrack.glon .gslide.on .gc { visibility: hidden; }
 .gslide .smp { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: "Cinzel", Georgia, serif; font-size: 12px; letter-spacing: .2em; color: rgba(150,120,70,.6); white-space: nowrap; }
 .gwrap { position: relative; width: 100%; }
+#ggl { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; display: block; }
 .gnav { display: flex; align-items: center; justify-content: center; margin-top: 14px; }
 /* arrows sit on either side of the photos, over the neighbouring slides */
 .garrow.gl, .garrow.gr { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; margin-top: 11px; filter: drop-shadow(0 0 3px rgba(255,252,246,.95)); }
@@ -508,6 +496,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
     <h2 class="gtitle">Wedding Photo</h2>
     <div class="grule" aria-hidden="true"><i></i><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0 L7.1 4.9 L12 6 L7.1 7.1 L6 12 L4.9 7.1 L0 6 L4.9 4.9 Z" fill="currentColor"/></svg><i></i></div>
     <div class="gwrap">
+      <canvas id="ggl" aria-hidden="true"></canvas>
       <div class="gtrack" id="gtrack" tabindex="0" aria-roledescription="carousel" aria-label="웨딩 사진 슬라이드. 좌우로 넘겨 보세요"></div>
       <button type="button" class="garrow gl" id="gprev" aria-label="이전 사진"><svg viewBox="0 0 12 24"><path d="M10 2 2 12l8 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button type="button" class="garrow gr" id="gnext" aria-label="다음 사진"><svg viewBox="0 0 12 24"><path d="M2 2l8 10-8 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -584,6 +573,7 @@ const SPRITES = {"t":[[1700,1768],[2048,1870],[1400,1614]],"p":{"arch":[0,0,542,
   }));
 })();
 
+const GAL = { moving: false };   // set by the gallery while its photos are being swiped
 /* ---------- stained glass renderer ---------- */
 (() => {
   const P = SPRITES.p, TS = SPRITES.t;          // P[name] = [x, y, w, h, atlasIndex]
@@ -777,7 +767,7 @@ void main(){
   }
   function loadImage(src, ok, fail) { const im = new Image(); im.onload = () => ok(im); if (fail) im.onerror = fail; im.src = src; }
 
-  let ok = !!gl && !!gs, BG = null, SP = null;
+  let ok = !!gl && !!gs, BG = null, SP = null, GGL = null;
   if (ok) {
     const build = (gl, vs, fs, names) => {
       const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
@@ -791,6 +781,25 @@ void main(){
     };
     BG = build(gl, BG_VS, BG_FS, ['uView','uTilt','uScroll','uDpr','uBg','uBgSize','uBgReady']);
     SP = build(gs, SP_VS, SP_FS, ['uVis[0]','uArch','uColor2','uRad','uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
+    // gallery: its photos are page images, so its corner glass is drawn on a small canvas above them,
+    // with exactly the same glass shader as every other piece
+    const gcv = document.getElementById('ggl');
+    const g3 = gcv && gcv.getContext('webgl', { antialias: false, premultipliedAlpha: true });
+    if (g3) {
+      GGL = { gl: g3, cv: gcv, SP: build(g3, SP_VS, SP_FS, ['uVis[0]','uArch','uColor2','uRad','uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']), tex: null };
+      const b3 = g3.createBuffer(); g3.bindBuffer(g3.ARRAY_BUFFER, b3);
+      g3.bufferData(g3.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 0,1, 1,1]), g3.STATIC_DRAW);
+      g3.enableVertexAttribArray(0); g3.vertexAttribPointer(0, 2, g3.FLOAT, false, 0, 0);
+      g3.enable(g3.BLEND); g3.blendFunc(g3.ONE, g3.ONE_MINUS_SRC_ALPHA);
+      const ti = P.gFanTR[4];
+      loadImage(ATLAS_URLS[ti], img => {
+        const tx = g3.createTexture(); g3.activeTexture(g3.TEXTURE0); g3.bindTexture(g3.TEXTURE_2D, tx);
+        [[g3.TEXTURE_MIN_FILTER, g3.LINEAR], [g3.TEXTURE_MAG_FILTER, g3.LINEAR], [g3.TEXTURE_WRAP_S, g3.CLAMP_TO_EDGE], [g3.TEXTURE_WRAP_T, g3.CLAMP_TO_EDGE]].forEach(([k, v]) => g3.texParameteri(g3.TEXTURE_2D, k, v));
+        g3.pixelStorei(g3.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        g3.texImage2D(g3.TEXTURE_2D, 0, g3.RGBA, g3.RGBA, g3.UNSIGNED_BYTE, img);
+        GGL.tex = tx;
+      });
+    }
   }
   if (ok) {
     [gl, gs].forEach(gl => {
@@ -957,7 +966,6 @@ void main(){
   const gB = gl;
   // which 5-degree steps of the wreath oval are clear of the crown, the sprigs and the blossom (with a margin)
   const visBuf = new Float32Array(72);
-  let hxLast = 9, hyLast = 9;
   function wreathGaps(el, R) {
     const cx = R.left + R.width / 2, cy = R.top + R.height / 2, rx = R.width / 2, ry = R.height / 2, m = 14;
     const blocks = [...el.parentNode.querySelectorAll('.spr'), el.closest('.hero-names').querySelector(':scope > .crown')]
@@ -969,16 +977,44 @@ void main(){
     }
     return visBuf;
   }
+  // gallery corner glass, on its own canvas over the photos; only while the photos are at rest
+  // (during a swipe the plain copies show, so nothing ever lags behind)
+  function drawGallery(vw, vh) {
+    if (!GGL || !GGL.tex) return;
+    const gtr = document.getElementById('gtrack'), wrap = GGL.cv.parentNode, g = GGL.gl, S = GGL.SP;
+    const wr = wrap.getBoundingClientRect();
+    const onScreen = wr.bottom > 0 && wr.top < vh;
+    const w = Math.round(wr.width * dpr), h = Math.round(wr.height * dpr);
+    if (GGL.cv.width !== w || GGL.cv.height !== h) { GGL.cv.width = w; GGL.cv.height = h; GGL.cv.style.width = wr.width + 'px'; GGL.cv.style.height = wr.height + 'px'; }
+    g.viewport(0, 0, w, h); g.clearColor(0, 0, 0, 0); g.clear(g.COLOR_BUFFER_BIT);
+    if (!onScreen || GAL.moving) return;
+    const tr = gtr.getBoundingClientRect();
+    g.enable(g.SCISSOR_TEST);
+    g.scissor(Math.max(0, Math.floor((tr.left - wr.left) * dpr)), Math.max(0, Math.floor((wr.bottom - tr.bottom) * dpr)), Math.ceil(tr.width * dpr), Math.ceil(tr.height * dpr));
+    g.useProgram(S.pr);
+    // rects stay in screen coordinates (so the light falls the same as on the other pieces); uOff shifts them onto this canvas
+    g.uniform2f(S.u.uCv, wr.width, wr.height); g.uniform1f(S.u.uOff, -wr.top); g.uniform2f(S.u.uView, vw, vh);
+    g.uniform2f(S.u.uTilt, cur.x, cur.y); g.uniform1f(S.u.uScroll, scrollY);
+    g.uniform1f(S.u.uMode, 0); g.uniform1f(S.u.uHasMask, 0); g.uniform1i(S.u.uTex, 0); g.uniform1i(S.u.uPh, 0);
+    let n = 0;
+    for (const el of gtr.querySelectorAll('.gslide.on .gc')) {
+      const sp = P[el.dataset.s]; if (!sp) continue;
+      const r = el.getBoundingClientRect();
+      if (r.right < tr.left || r.left > tr.right) continue;
+      const T = TS[sp[4]];
+      g.uniform4f(S.u.uA, sp[0] / T[0], sp[1] / T[1], sp[2] / T[0], sp[3] / T[1]);
+      g.uniform4f(S.u.uRect, r.left - wr.left, r.top, r.width, r.height);
+      g.uniform1f(S.u.uSeed, 4.2 + n * 1.7);
+      g.drawArrays(g.TRIANGLE_STRIP, 0, 4); n++;
+    }
+    g.disable(g.SCISSOR_TEST);
+    if (n && !gtr.classList.contains('glon')) requestAnimationFrame(() => { if (!GAL.moving) gtr.classList.add('glon'); });
+  }
   function frame(now) {
     const t = (now - t0) / 1000;
     if (!reduce && now - lastInput > 2500) { target.x = Math.sin(t * .45) * .6; target.y = Math.cos(t * .33) * .22; }
     const k = reduce ? .04 : .07;
     cur.x += (target.x - cur.x) * k; cur.y += (target.y - cur.y) * k;
-    // the gallery's holographic shimmer is plain CSS; give it the same tilt
-    if (Math.abs(cur.x - hxLast) > .004 || Math.abs(cur.y - hyLast) > .004) {
-      hxLast = cur.x; hyLast = cur.y;
-      root.style.setProperty('--hx', cur.x.toFixed(3)); root.style.setProperty('--hy', cur.y.toFixed(3));
-    }
     resize();
     const vw = cr.width, vh = cr.height, ox0 = cr.left, oy0 = cr.top;
     // scroll prediction: the page has moved on by the time this frame is shown, so draw pieces one frame ahead
@@ -1009,6 +1045,12 @@ void main(){
       if (el.checkVisibility ? !el.checkVisibility() : el.offsetParent === null) continue;
       vis.push([el, r, s]);
     }
+    const clipTo = c => {
+      if (!c) { gl.disable(gl.SCISSOR_TEST); return; }
+      gl.enable(gl.SCISSOR_TEST);
+      const x = Math.max(0, Math.floor(c[0] * dpr)), y = Math.max(0, Math.floor(scv.height - (c[1] + M + c[3]) * dpr));
+      gl.scissor(x, y, Math.max(0, Math.ceil(c[2] * dpr)), Math.max(0, Math.ceil(c[3] * dpr)));
+    };
     const setTex = s => {
       const T = TS[s[4]];
       gl.uniform1i(SP.u.uTex, AU[s[4]]);
@@ -1034,18 +1076,18 @@ void main(){
     // pass 1: coloured light on the page
     const ox = 5 + cur.x * 16, oy = 11 + cur.y * 6;
     gl.uniform1f(SP.u.uMode, 1); gl.uniform1f(SP.u.uHasMask, 0);
-    for (const [el, r, s] of vis) {
-      setTex(s);
+    for (const [el, r, s, clip] of vis) {
+      setTex(s); clipTo(clip);
       const ex = r.width * .03, ey = r.height * .03;
       gl.uniform4f(SP.u.uRect, r.left + ox - ex, r.top - lead + oy - ey, r.width + ex * 2, r.height + ey * 2);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     // pass 2: the glass itself
     gl.uniform1f(SP.u.uMode, 0);
-    for (const [el, r, s] of vis) {
-      setTex(s);
+    for (const [el, r, s, clip] of vis) {
+      setTex(s); clipTo(clip);
       gl.uniform4f(SP.u.uRect, r.left, r.top - lead, r.width, r.height);
-      gl.uniform1f(SP.u.uSeed, seeds.get(el));
+      gl.uniform1f(SP.u.uSeed, seeds.get(el) ?? 4.2);
       if (el.dataset.m) {
         const m = P[el.dataset.m], T = TS[m[4]];
         gl.uniform1f(SP.u.uHasMask, 1);
@@ -1056,6 +1098,8 @@ void main(){
       }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
+    clipTo(null);
+    drawGallery(vw, vh);
     if (glBack) { glBack = false; requestAnimationFrame(() => root.classList.remove('dom')); }
     requestAnimationFrame(frame);
   }
@@ -1076,7 +1120,7 @@ void main(){
   let items = [], idx = 0, sample = true;
   const cornerEl = (name, pos, mv, mh, s) => {
     const [x, y, w, h, ti] = P[name], AW = TS[ti][0], AH = TS[ti][1];
-    const e = document.createElement('span'); e.className = 'gc';
+    const e = document.createElement('span'); e.className = 'gc'; e.dataset.s = name;
     e.style.cssText = `width:${w * s}px;height:${h * s}px;--gi:url(${ATLAS_URLS[ti]});--gs:${AW * s}px ${AH * s}px;--gp:${-x * s}px ${-y * s}px;`;
     e.style[pos[0] === 't' ? 'top' : 'bottom'] = (-mv * s) + 'px';
     e.style[pos[1] === 'l' ? 'left' : 'right'] = (-mh * s) + 'px';
@@ -1144,6 +1188,11 @@ void main(){
     } else mark();
   }
   let t = 0, rest = 0;
+  let swipeT = 0;
+  track.addEventListener('scroll', () => {
+    GAL.moving = true; track.classList.remove('glon');
+    clearTimeout(swipeT); swipeT = setTimeout(() => { GAL.moving = false; }, 220);
+  }, { passive: true });
   track.addEventListener('scroll', () => {
     cancelAnimationFrame(t);
     t = requestAnimationFrame(() => { const p = nearest(); if (p !== cur) { cur = p; idx = realOf(p); mark(); } });
