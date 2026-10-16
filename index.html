@@ -34,6 +34,7 @@ p { margin: 0; }
 
 .spr { position: relative; display: block; max-width: 100%; flex: none; }
 :is(.no-gl, .dom) .flat[data-c="gold"] { background: #c69e59; } :is(.no-gl, .dom) .flat[data-c="veil"] { background: rgba(255,254,253,.82); border-radius: 18px; }
+:is(.no-gl, .dom) .flat[data-g="warm"] { background: linear-gradient(rgba(255,254,253,.82) 35%, rgba(255,236,214,.88)); }
 :is(.no-gl, .dom) .spr::after { content: ""; position: absolute; inset: 0; background: var(--sb) no-repeat; background-size: var(--bs); background-position: var(--bp); pointer-events: none; }
 /* the coloured light each piece throws on the page, so it stays while scrolling (same offset, size and tint as the glass layer's) */
 .dom .spr:not(.flat):not(.hang)::before { content: ""; position: absolute; inset: 0; background: var(--sb) no-repeat; background-size: var(--bs); background-position: var(--bp); pointer-events: none;
@@ -152,9 +153,13 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
 .inv-card .rule { width: 92px; margin-top: 14px; }
 .inv-card .message { font-size: 13px; line-height: 27px; margin-top: 22px; }
 .inv-card .swag { width: 170px; margin-top: 24px; }
-.inv-card .parents { width: 100%; display: grid; grid-template-columns: 1fr 26px 1fr; align-items: center; gap: 4px; margin-top: 24px; font-size: 11px; color: var(--ink-soft); }
+.inv-card .parents { width: 100%; display: grid; grid-template-columns: 1fr 26px 1fr; align-items: center; gap: 4px; margin-top: 46px; font-size: 13px; color: var(--ink-soft); }
 .inv-card .parents p { line-height: 22px; margin: 0; }
-.inv-card .parents b { display: block; color: var(--ink); font-size: 16px; margin-top: 6px; }
+.inv-card .parents b { display: block; color: var(--ink); font-size: 21px; margin-top: 8px; letter-spacing: .04em; }
+/* a column of small gold dots between the two families, fading at both ends */
+.inv-card .parents .dots { justify-self: center; align-self: stretch; width: 4px; min-height: 120px; margin-block: -6px -30px;
+  background: radial-gradient(circle, rgba(190,150,80,.85) 1.3px, transparent 1.8px) center top / 4px 11px repeat-y;
+  -webkit-mask: linear-gradient(transparent, #000 18%, #000 78%, transparent); mask: linear-gradient(transparent, #000 18%, #000 78%, transparent); }
 .inv-card .parents .spr { width: 22px; justify-self: center; }
 
 /* ---- wedding day ---- */
@@ -367,7 +372,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
   <!-- greeting -->
   <section class="sheet inv" aria-label="인사말">
     <div class="inv-card">
-      <span class="flat fr-veil" data-c="veil"></span>
+      <span class="flat fr-veil" data-c="veil" data-g="warm"></span>
       <div class="spr crown" data-s="crownC" aria-hidden="true"></div>
       <div class="spr pend" data-s="pend3" aria-hidden="true"></div>
       <div class="spr c tl" data-s="cTL" aria-hidden="true"></div>
@@ -377,10 +382,9 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
       <p class="cz">INVITATION</p>
       <div class="rule"><span class="spr" data-s="starS" aria-hidden="true"></span></div>
       <p class="message">빛이 유리를 지나 색이 되듯<br>서로를 만나 새로운 빛깔이 되었습니다.<br>저희의 첫걸음에 함께해 주시면<br>더없는 기쁨으로 간직하겠습니다.</p>
-      <div class="spr swag" data-s="divPearl" aria-hidden="true"></div>
       <div class="parents">
         <p>이정훈 · 박미영<br>의 아들<b>도윤</b></p>
-        <div class="spr" data-s="pend2" aria-hidden="true"></div>
+        <span class="dots" aria-hidden="true"></span>
         <p>김성호 · 최은주<br>의 딸<b>서연</b></p>
       </div>
     </div>
@@ -608,7 +612,7 @@ attribute vec2 q; uniform vec4 uRect; uniform vec2 uView; uniform vec2 uCv; unif
 void main(){ vL = q; vec2 p = (uRect.xy + q*uRect.zw + vec2(0., uOff)) / uCv; gl_Position = vec4(p.x*2.-1., 1.-p.y*2., 0., 1.); }`;
   const SP_FS = COMMON + `
 uniform sampler2D uTex; uniform vec4 uA; uniform vec4 uRect; uniform float uMode; uniform float uSeed;
-uniform vec4 uM; uniform float uHasMask; uniform sampler2D uPh; uniform vec4 uColor; uniform float uRad;
+uniform vec4 uM; uniform float uHasMask; uniform sampler2D uPh; uniform vec4 uColor; uniform vec4 uColor2; uniform float uRad;
 varying vec2 vL;
 vec4 at(vec2 l){ if (l.x < 0. || l.y < 0. || l.x > 1. || l.y > 1.) return vec4(0.); return texture2D(uTex, uA.xy + l*uA.zw); }
 void main(){
@@ -616,11 +620,12 @@ void main(){
   vec2 p = uRect.xy + l*uRect.zw;
   if (uMode > 1.5) {
     float sh = sheenAt(p);
-    vec3 c = uColor.rgb + (uColor.a > .8 ? vec3(1.,.93,.75) * pow(sh, 2.) * .35 : vec3(0.));
+    vec4 cc = mix(uColor, uColor2, smoothstep(.35, 1., l.y));
+    vec3 c = cc.rgb + (uColor.a > .85 ? vec3(1.,.93,.75) * pow(sh, 2.) * .35 : vec3(0.));
     // rounded corners (uRad in px): distance to a rounded box, softened over one pixel
     vec2 hs = uRect.zw * .5, q2 = abs(l * uRect.zw - hs) - (hs - uRad);
     float d = length(max(q2, 0.)) + min(max(q2.x, q2.y), 0.) - uRad;
-    float a = uColor.a * clamp(.5 - d, 0., 1.);
+    float a = cc.a * clamp(.5 - d, 0., 1.);
     gl_FragColor = vec4(c * a, a);
     return;
   }
@@ -718,7 +723,7 @@ void main(){
       return { pr, u };
     };
     BG = build(gl, BG_VS, BG_FS, ['uView','uTilt','uScroll','uDpr','uBg','uBgSize','uBgReady']);
-    SP = build(gs, SP_VS, SP_FS, ['uRad','uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
+    SP = build(gs, SP_VS, SP_FS, ['uColor2','uRad','uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
   }
   if (ok) {
     [gl, gs].forEach(gl => {
@@ -931,6 +936,9 @@ void main(){
       if (r.bottom < -M || r.top > vh + M) continue;
       const c = el.dataset.c === 'gold' ? [.78, .62, .35, .9] : [1, .998, .992, .82];
       gl.uniform4f(SP.u.uColor, c[0], c[1], c[2], c[3]);
+      // warm veil: white at the top melting into a soft peach glow towards the bottom
+      const c2 = el.dataset.g === 'warm' ? [1, .925, .84, .88] : c;
+      gl.uniform4f(SP.u.uColor2, c2[0], c2[1], c2[2], c2[3]);
       gl.uniform1f(SP.u.uRad, el.dataset.c === 'veil' ? 18 : 0);
       gl.uniform4f(SP.u.uRect, r.left, r.top - lead, r.width, r.height);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
