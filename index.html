@@ -128,9 +128,10 @@ h2 { font-family: var(--font-body); font-weight: 700; font-size: 18px; margin: 0
 .venue-line { margin-top: -10px; font-size: 14px; color: var(--ink-soft); text-align: center; }
 /* hero names: arched white panel behind the names, bud sprigs either side, date without a frame */
 .hero-names { position: relative; gap: 0; }
-.hero-names .arch-veil { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); width: min(70%, 290px); aspect-ratio: 290 / 262; }
+.hero-names .names-box { position: relative; }
+.hero-names .arch-veil { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%); width: min(62vw, 256px); aspect-ratio: 1; z-index: -1; }
 .hero-names > .crown { position: relative; z-index: 1; width: 196px; }
-:is(.no-gl, .dom) .hero-names .arch-veil { border-radius: 50% 50% 0 0 / 44% 44% 0 0; -webkit-mask: linear-gradient(#000 50%, transparent); mask: linear-gradient(#000 50%, transparent); }
+:is(.no-gl, .dom) .hero-names .arch-veil { border-radius: 50%; }
 .hero-names .names-row { margin-top: 24px; grid-template-columns: 96px 1fr 96px; align-items: end; }
 .hero-names .names-row .spr { width: 76px; margin-bottom: -36px; justify-self: center; }
 .hero-names .names-box { gap: 6px; padding-bottom: 0; }
@@ -384,11 +385,11 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
 
   <!-- names & date -->
   <div class="block hero-names">
-    <span class="flat arch-veil" data-c="veil" data-arch="1" aria-hidden="true"></span>
     <div class="spr crown" data-s="crownC" aria-hidden="true"></div>
     <div class="names-row">
       <div class="spr" data-s="sprigB" aria-hidden="true"></div>
       <div class="names-box">
+        <span class="flat arch-veil" data-c="veil" data-arch="1" aria-hidden="true"></span>
         <h1 class="names">Doyun<span class="amp">&amp;</span>Seoyeon</h1>
         <p class="kr">이도윤 · 김서연</p>
       </div>
@@ -659,16 +660,19 @@ void main(){
     float d = length(max(q2, 0.)) + min(max(q2.x, q2.y), 0.) - uRad;
     float a = cc.a * clamp(.5 - d, 0., 1.);
     if (uArch > .5) {
-      // round panel: an oval dome (half-width wide, ry tall) on straight sides, fading out towards the bottom,
-      // with two thin gold arcs following the dome down its left and right
-      vec2 lp = l * uRect.zw; float R = uRect.z * .5, ry = uRect.z * .4;
-      float da = lp.y < ry ? (length(vec2(lp.x - R, (lp.y - ry) * R / ry)) - R) * mix(ry / R, 1., smoothstep(0., ry, lp.y))
-                           : max(-lp.x, lp.x - uRect.z);
-      a = cc.a * clamp(.5 - da, 0., 1.) * (1. - smoothstep(.62, 1., l.y));
-      float g = clamp(1. - abs(da + 3.) / .8, 0., 1.) * smoothstep(.18 * ry, .42 * ry, lp.y) * (1. - smoothstep(.9 * ry, 1.25 * ry, lp.y)) * .9;
-      vec3 col = mix(cc.rgb, vec3(.78, .62, .35), g);
+      // round panel: a full white circle behind the names, with a thin gold line running along its upper half
+      vec2 lp = l * uRect.zw; float R = uRect.z * .5;
+      float da = length(lp - vec2(R)) - R;
+      float yy = (lp.y - R) / R;
+      a = .93 * clamp(.5 - da, 0., 1.);
+      // soft shadow hugging the lower edge, so the circle lifts off the page
+      float sh = (1. - clamp(.5 - da, 0., 1.)) * exp(-max(da, 0.) / 7.) * smoothstep(.05, .75, yy) * .16;
+      float g = clamp(1. - abs(da + 3.) / .8, 0., 1.) * (1. - smoothstep(-.35, -.05, yy)) * .9;
+      vec3 col = mix(vec3(1., .998, .993), vec3(.78, .62, .35), g);
       float al = max(a, g);
-      gl_FragColor = vec4(col * al, al);
+      vec4 o = vec4(col * al, al);
+      o += vec4(vec3(.55, .5, .47) * sh, sh) * (1. - o.a);
+      gl_FragColor = o;
       return;
     }
     gl_FragColor = vec4(c * a, a);
