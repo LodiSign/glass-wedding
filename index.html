@@ -201,10 +201,10 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
 /* ---- location ---- */
 .loc .crown { width: 110px; margin-top: -2px; }
 .loc .lrow { margin-top: 16px; }
-.loc .vplate { width: calc(100% + 24px); max-width: 382px; margin-inline: -12px; margin-top: 14px; }
+.loc .vplate { width: calc(100% + 24px); max-width: 382px; margin-inline: -12px; margin-top: -20px; }
 .loc .vplate .vt { position: absolute; left: 21%; right: 21%; top: 24%; bottom: 15%; display: grid; place-content: center; gap: 6px; text-align: center; }
-.loc .vplate .v1 { font-size: 20px; font-weight: 700; line-height: 1.25; margin: 0; letter-spacing: .02em; }
-.loc .vplate .v2 { font-size: 15px; line-height: 1.3; margin: 0; color: var(--ink-soft); }
+.loc .vplate .v1 { font-size: clamp(19px, 5.3vw, 22.5px); font-weight: 700; line-height: 1.25; margin: 0; letter-spacing: .02em; }
+.loc .vplate .v2 { font-size: clamp(14px, 3.8vw, 16px); line-height: 1.3; margin: 0; color: var(--ink-soft); }
 .loc .addr { font-size: 13px; color: var(--ink-soft); margin-top: 14px; }
 .pills { width: calc(100% + 16px); max-width: 374px; margin-inline: -8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 18px; }
 .pill-btn { position: relative; display: block; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink); text-decoration: none; font-family: var(--font-body); }
