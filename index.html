@@ -136,6 +136,9 @@ h2 { font-family: var(--font-body); font-weight: 700; font-size: 18px; margin: 0
 .lrow { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .lrow .ln { width: 30px; height: 1px; background: rgba(190,150,80,.75); }
 .lrow .spr { width: 10px; }
+/* small gold ring used as the divider mark (replaces the little diamond gems) */
+.oring { display: block; flex: none; width: 9px; aspect-ratio: 1; border: 1.5px solid #c49b58; border-radius: 50%; }
+.lrow .oring { width: 8px; } .loc .rule .oring { width: 10px; }
 .lrow .cz { padding-inline: calc(.3em + 5px) 5px; }
 .hang { position: relative; width: 18px; }
 .hang::before { content: ""; position: absolute; left: 50%; bottom: 92%; width: 1px; height: 44px; background: linear-gradient(rgba(190,150,80,0), rgba(190,150,80,.8)); }
@@ -380,7 +383,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
       <div class="spr c bl" data-s="cBL" aria-hidden="true"></div>
       <div class="spr c br" data-s="cBRm" aria-hidden="true"></div>
       <p class="cz">INVITATION</p>
-      <div class="rule"><span class="spr" data-s="starS" aria-hidden="true"></span></div>
+      <div class="rule"><span class="oring" aria-hidden="true"></span></div>
       <p class="message">빛이 유리를 지나 색이 되듯<br>서로를 만나 새로운 빛깔이 되었습니다.<br>저희의 첫걸음에 함께해 주시면<br>더없는 기쁨으로 간직하겠습니다.</p>
       <div class="parents">
         <p>이정훈 · 박미영<br>의 아들<b>도윤</b></p>
@@ -395,7 +398,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
     <div class="spr gem" data-s="roseStar" aria-hidden="true"></div>
     <p class="cz">WEDDING DAY</p>
     <p class="date-kr">2027년 5월 22일 토요일 낮 12시 30분</p>
-    <div class="rule"><span class="spr" data-s="starS" aria-hidden="true"></span></div>
+    <div class="rule"><span class="oring" aria-hidden="true"></span></div>
     <p class="month">2027. 05</p>
     <div class="cal" id="cal" aria-label="2027년 5월 달력"></div>
     <div class="spr dplate" data-s="pillStar"><p class="dday" id="dday"></p></div>
@@ -405,7 +408,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
   <section class="sheet loc" aria-label="오시는 길">
     <div class="spr hang" data-s="pend3" aria-hidden="true"></div>
     <div class="spr crown" data-s="crownR" aria-hidden="true"></div>
-    <div class="lrow"><span class="ln"></span><span class="spr" data-s="starS" aria-hidden="true"></span><p class="cz">LOCATION</p><span class="spr" data-s="starS" aria-hidden="true"></span><span class="ln"></span></div>
+    <div class="lrow"><span class="ln"></span><span class="oring" aria-hidden="true"></span><p class="cz">LOCATION</p><span class="oring" aria-hidden="true"></span><span class="ln"></span></div>
     <div class="spr vplate" data-s="lilyFrame"><div class="vt"><p class="v1">라벤더가든 웨딩홀</p><p class="v2">3층 그레이스홀</p></div></div>
     <p class="addr">서울 강남구 테헤란로 123</p>
     <div class="pills">
@@ -413,7 +416,7 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
       <a class="pill-btn" href="https://map.naver.com/p/search/%EB%9D%BC%EB%B2%A4%EB%8D%94%EA%B0%80%EB%93%A0%EC%9B%A8%EB%94%A9%ED%99%80" target="_blank" rel="noopener"><span class="in"><svg class="st" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0 L7.1 4.9 L12 6 L7.1 7.1 L6 12 L4.9 7.1 L0 6 L4.9 4.9 Z" fill="currentColor"/></svg><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5 3.5 10.6l7.2 2.7 2.7 7.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span class="lbl">네이버 지도</span><svg class="st" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0 L7.1 4.9 L12 6 L7.1 7.1 L6 12 L4.9 7.1 L0 6 L4.9 4.9 Z" fill="currentColor"/></svg></span></a>
       <a class="pill-btn" href="https://map.kakao.com/?q=%EB%9D%BC%EB%B2%A4%EB%8D%94%EA%B0%80%EB%93%A0%EC%9B%A8%EB%94%A9%ED%99%80" target="_blank" rel="noopener"><span class="in"><svg class="st" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0 L7.1 4.9 L12 6 L7.1 7.1 L6 12 L4.9 7.1 L0 6 L4.9 4.9 Z" fill="currentColor"/></svg><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 6.5C3 4.6 4.8 3 7.2 3h4.6C14.2 3 16 4.6 16 6.5S14.2 10 11.8 10H8.5L5.6 12.3l.6-2.6C4.3 9.2 3 8 3 6.5z"/><path d="M17.2 8.6c2.2.4 3.8 1.9 3.8 3.7 0 1.4-.9 2.6-2.3 3.2l.5 2.4-2.6-2H13c-1.6 0-3-.7-3.7-1.8"/></svg><span class="lbl">카카오맵</span><svg class="st" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0 L7.1 4.9 L12 6 L7.1 7.1 L6 12 L4.9 7.1 L0 6 L4.9 4.9 Z" fill="currentColor"/></svg></span></a>
     </div>
-    <div class="rule"><span class="spr" data-s="starS" aria-hidden="true"></span></div>
+    <div class="rule"><span class="oring" aria-hidden="true"></span></div>
     <dl class="ways">
       <div><span class="ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="14" rx="3"/><path d="M6 11h12M9 21l1.5-4M15 21l-1.5-4M8.5 21h7"/><circle cx="9.5" cy="14" r=".6" fill="currentColor"/><circle cx="14.5" cy="14" r=".6" fill="currentColor"/></svg></span><div class="txt"><dt>지하철</dt><dd>2호선 역삼역 3번 출구에서 도보 5분</dd></div></div>
       <div><span class="ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="15" rx="2.5"/><path d="M5 11h14M8 18v2.5M16 18v2.5M9 6.5h6"/><circle cx="8.5" cy="14.5" r=".6" fill="currentColor"/><circle cx="15.5" cy="14.5" r=".6" fill="currentColor"/></svg></span><div class="txt"><dt>버스</dt><dd>역삼역 정류장 하차 · 146, 341, 360</dd></div></div>
@@ -431,10 +434,9 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
     <div class="spr c tr" data-s="gTRm" aria-hidden="true"></div>
     <div class="spr c bl" data-s="gBL" aria-hidden="true"></div>
     <div class="spr c br" data-s="gBRm" aria-hidden="true"></div>
-    <div class="spr gem-b" data-s="starS" aria-hidden="true"></div>
-    <div class="lrow"><span class="ln"></span><span class="spr" data-s="starS" aria-hidden="true"></span><p class="cz">WITH LOVE</p><span class="spr" data-s="starS" aria-hidden="true"></span><span class="ln"></span></div>
+    <div class="lrow"><span class="ln"></span><span class="oring" aria-hidden="true"></span><p class="cz">WITH LOVE</p><span class="oring" aria-hidden="true"></span><span class="ln"></span></div>
     <h2 class="ttl">마음 전하실 곳</h2>
-    <div class="rule"><span class="spr" data-s="starS" aria-hidden="true"></span></div>
+    <div class="rule"><span class="oring" aria-hidden="true"></span></div>
     <details class="acc">
       <summary>신랑측 계좌번호<span class="sb" aria-hidden="true"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0 L7.1 4.9 L12 6 L7.1 7.1 L6 12 L4.9 7.1 L0 6 L4.9 4.9 Z" fill="currentColor"/></svg></span></summary>
         <div class="acct"><div><small>신랑 이도윤</small><span class="num">신한 110-000-000000</span></div><button type="button" class="ic-mini" data-copy="신한 110-000-000000" aria-label="계좌번호 복사"><span class="spr" data-s="icCopy" aria-hidden="true"></span><span class="lbl">복사</span></button></div>
