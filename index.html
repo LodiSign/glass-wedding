@@ -33,9 +33,7 @@ main { position: relative; z-index: 1; max-width: 400px; margin: 0 auto; display
 p { margin: 0; }
 
 .spr { position: relative; display: block; max-width: 100%; flex: none; }
-:is(.no-gl, .dom) .flat[data-c="gold"] { background: #c69e59; } :is(.no-gl, .dom) .flat[data-c="veil"] { display: none; }
-:is(.no-gl, .dom) .inv-card { background: linear-gradient(rgba(255,252,246,.62), rgba(255,252,246,.62)) 7px 7px / calc(100% - 14px) calc(100% - 14px) no-repeat; }
-:is(.no-gl, .dom) .acct-card { background: linear-gradient(rgba(255,252,246,.62), rgba(255,252,246,.62)) 8px 8px / calc(100% - 16px) calc(100% - 16px) no-repeat; }
+:is(.no-gl, .dom) .flat[data-c="gold"] { background: #c69e59; } :is(.no-gl, .dom) .flat[data-c="veil"] { background: rgba(255,254,253,.82); border-radius: 18px; }
 :is(.no-gl, .dom) .spr::after { content: ""; position: absolute; inset: 0; background: var(--sb) no-repeat; background-size: var(--bs); background-position: var(--bp); pointer-events: none; }
 /* the coloured light each piece throws on the page, so it stays while scrolling (same offset, size and tint as the glass layer's) */
 .dom .spr:not(.flat):not(.hang)::before { content: ""; position: absolute; inset: 0; background: var(--sb) no-repeat; background-size: var(--bs); background-position: var(--bp); pointer-events: none;
@@ -610,7 +608,7 @@ attribute vec2 q; uniform vec4 uRect; uniform vec2 uView; uniform vec2 uCv; unif
 void main(){ vL = q; vec2 p = (uRect.xy + q*uRect.zw + vec2(0., uOff)) / uCv; gl_Position = vec4(p.x*2.-1., 1.-p.y*2., 0., 1.); }`;
   const SP_FS = COMMON + `
 uniform sampler2D uTex; uniform vec4 uA; uniform vec4 uRect; uniform float uMode; uniform float uSeed;
-uniform vec4 uM; uniform float uHasMask; uniform sampler2D uPh; uniform vec4 uColor;
+uniform vec4 uM; uniform float uHasMask; uniform sampler2D uPh; uniform vec4 uColor; uniform float uRad;
 varying vec2 vL;
 vec4 at(vec2 l){ if (l.x < 0. || l.y < 0. || l.x > 1. || l.y > 1.) return vec4(0.); return texture2D(uTex, uA.xy + l*uA.zw); }
 void main(){
@@ -619,7 +617,11 @@ void main(){
   if (uMode > 1.5) {
     float sh = sheenAt(p);
     vec3 c = uColor.rgb + (uColor.a > .8 ? vec3(1.,.93,.75) * pow(sh, 2.) * .35 : vec3(0.));
-    gl_FragColor = vec4(c * uColor.a, uColor.a);
+    // rounded corners (uRad in px): distance to a rounded box, softened over one pixel
+    vec2 hs = uRect.zw * .5, q2 = abs(l * uRect.zw - hs) - (hs - uRad);
+    float d = length(max(q2, 0.)) + min(max(q2.x, q2.y), 0.) - uRad;
+    float a = uColor.a * clamp(.5 - d, 0., 1.);
+    gl_FragColor = vec4(c * a, a);
     return;
   }
   if (uMode > .5) {
@@ -716,7 +718,7 @@ void main(){
       return { pr, u };
     };
     BG = build(gl, BG_VS, BG_FS, ['uView','uTilt','uScroll','uDpr','uBg','uBgSize','uBgReady']);
-    SP = build(gs, SP_VS, SP_FS, ['uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
+    SP = build(gs, SP_VS, SP_FS, ['uRad','uCv','uOff','uView','uTilt','uScroll','uTex','uA','uRect','uMode','uSeed','uM','uHasMask','uPh','uColor']);
   }
   if (ok) {
     [gl, gs].forEach(gl => {
@@ -927,8 +929,9 @@ void main(){
       const r0 = el.getBoundingClientRect();
       const r = { left: r0.left - ox0, top: r0.top - oy0, width: r0.width, height: r0.height, bottom: r0.bottom - oy0 };
       if (r.bottom < -M || r.top > vh + M) continue;
-      const c = el.dataset.c === 'gold' ? [.78, .62, .35, .9] : [1, .988, .965, .62];
+      const c = el.dataset.c === 'gold' ? [.78, .62, .35, .9] : [1, .998, .992, .82];
       gl.uniform4f(SP.u.uColor, c[0], c[1], c[2], c[3]);
+      gl.uniform1f(SP.u.uRad, el.dataset.c === 'veil' ? 18 : 0);
       gl.uniform4f(SP.u.uRect, r.left, r.top - lead, r.width, r.height);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
