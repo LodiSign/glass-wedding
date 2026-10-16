@@ -290,25 +290,22 @@ section.sheet { position: relative; width: 100%; display: flex; flex-direction: 
 .gslide .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gslide .bd { position: absolute; inset: 0; border-radius: 14px; box-shadow: inset 0 0 0 2px #c9a35f, inset 0 0 0 4px rgba(255,250,240,.6), 0 6px 18px rgba(140,110,60,.18); pointer-events: none; }
 .gslide .gc { position: absolute; pointer-events: none; background: var(--gi) var(--gp) / var(--gs) no-repeat; }
-/* holographic shimmer on the gallery glass: a rainbow band and a white glint that slide with the phone's tilt
-   (--hx / --hy are set from the tilt each frame), clipped to the glass piece / the frame line */
-.gslide .gc::after, .gslide .bd::after, .gslide .gc::before { content: ""; position: absolute; inset: 0; pointer-events: none; }
-/* rainbow tint band */
-.gslide .gc::after, .gslide .bd::after {
-  background: linear-gradient(calc(118deg + var(--hx, 0) * 30deg),
-    rgba(255,150,205,.0) calc(0% + var(--hx, 0) * 40%), rgba(255,140,200,.85) calc(22% + var(--hx, 0) * 40%),
-    rgba(150,190,255,.9) calc(40% + var(--hx, 0) * 40%), rgba(140,235,210,.85) calc(56% + var(--hx, 0) * 40%),
-    rgba(255,215,130,.85) calc(72% + var(--hx, 0) * 40%), rgba(255,215,130,0) calc(92% + var(--hx, 0) * 40%));
-  background-size: 100% 100%; mix-blend-mode: multiply; }
-/* white glint that slides across with the tilt */
-.gslide .gc::before { z-index: 1; mix-blend-mode: screen;
-  background: linear-gradient(calc(125deg + var(--hx, 0) * 30deg), transparent calc(30% + var(--hx, 0) * 45% + var(--hy, 0) * 10%), rgba(255,255,255,.95) calc(42% + var(--hx, 0) * 45% + var(--hy, 0) * 10%), transparent calc(54% + var(--hx, 0) * 45% + var(--hy, 0) * 10%)); }
-.gslide .gc::after, .gslide .gc::before { -webkit-mask: var(--gi) var(--gp) / var(--gs) no-repeat; mask: var(--gi) var(--gp) / var(--gs) no-repeat; }
-.gslide .gc::after { opacity: .55; }
-.gslide .bd::after { border-radius: 14px; padding: 2.5px; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); opacity: .75; mix-blend-mode: normal; }
-/* a faint glass reflection sweeping across the photo */
-.gslide .ph::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(calc(115deg + var(--hx, 0) * 20deg), transparent calc(30% + var(--hx, 0) * 35%), rgba(255,255,255,.28) calc(45% + var(--hx, 0) * 35%), rgba(200,225,255,.12) calc(52% + var(--hx, 0) * 35%), transparent calc(66% + var(--hx, 0) * 35%)); }
+/* stained-glass sheen on the gallery corner glass, like the other glass pieces: a warm white light band
+   that slides with the phone's tilt (--hx / --hy, set each frame) plus a few twinkling glints, clipped to the piece */
+.gslide .gc::after, .gslide .gc::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  -webkit-mask: var(--gi) var(--gp) / var(--gs) no-repeat; mask: var(--gi) var(--gp) / var(--gs) no-repeat; mix-blend-mode: screen; }
+.gslide .gc::after {
+  background: linear-gradient(calc(122deg + var(--hx, 0) * 24deg),
+    transparent calc(18% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
+    rgba(255,238,200,.55) calc(36% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
+    rgba(255,252,240,.95) calc(46% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
+    rgba(255,238,200,.55) calc(56% + var(--hx, 0) * 42% - var(--hy, 0) * 12%),
+    transparent calc(74% + var(--hx, 0) * 42% - var(--hy, 0) * 12%)); }
+.gslide .gc::before {
+  background: radial-gradient(circle at calc(30% + var(--hx, 0) * 25%) calc(38% - var(--hy, 0) * 20%), #fff 0 1.2px, transparent 2.4px),
+              radial-gradient(circle at calc(62% - var(--hx, 0) * 20%) calc(64% + var(--hy, 0) * 15%), #fff 0 1px, transparent 2px),
+              radial-gradient(circle at calc(48% + var(--hx, 0) * 30%) calc(22% + var(--hy, 0) * 10%), rgba(255,250,235,.9) 0 .9px, transparent 1.8px);
+  opacity: calc(.35 + var(--hx, 0) * var(--hx, 0) * .65); }
 .gslide .smp { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: "Cinzel", Georgia, serif; font-size: 12px; letter-spacing: .2em; color: rgba(150,120,70,.6); white-space: nowrap; }
 .gwrap { position: relative; width: 100%; }
 .gnav { display: flex; align-items: center; justify-content: center; margin-top: 14px; }
